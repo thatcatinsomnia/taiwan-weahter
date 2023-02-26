@@ -19,7 +19,7 @@ type GLTFResult = GLTF & {
 
 export type Props = JSX.IntrinsicElements['group'] & {
   weather?: 'rain' | 'sun' | 'cloud';
-  wireframe: boolean;
+  wireframe?: boolean;
   x?: number;
   y?: number;
   z?: number;

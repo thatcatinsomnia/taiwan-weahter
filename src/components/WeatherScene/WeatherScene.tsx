@@ -13,9 +13,6 @@ const AnimatedCloud = animated(Cloud);
 const AnimatedRaindrop = animated(Raindrop);
 
 export default function WeatherScene({ weather, position, ...delegated }: Props) {
-
-  console.log(position);
-
   return (
     <group {...delegated} position={position}>
       <AnimatedRaindrop />

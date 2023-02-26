@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Dispatch, SetStateAction } from 'react';
 import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera, Stats } from '@react-three/drei';
@@ -12,7 +13,11 @@ type CameraSpring = {
   rotationX: number;
 };
 
-export default function Experience() {
+type Props = {
+  setLocation: Dispatch<SetStateAction<string>>;
+}
+
+export default function Experience({ setLocation }: Props) {
   const [springs, api] = useSpring<CameraSpring>(() => ({
     position: [0, 0, 5],
     rotationX: 0
@@ -26,7 +31,7 @@ export default function Experience() {
       <directionalLight position={[0, 0, 10]} intensity={0.5} />
 
       <Suspense fallback={null}>
-        <Taiwan cameraApi={api}/>
+        <Taiwan cameraApi={api} setLocation={setLocation} />
       </Suspense>
     </Canvas>
   );
