@@ -6,7 +6,7 @@ export default function() {
       min: -3,
       max: 3,
       step: 0.01,
-      value: 0.8 
+      value: 1.1
     },
     y: {
       min: -3,

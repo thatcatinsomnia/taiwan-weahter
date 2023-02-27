@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { useState, useEffect } from 'react';
+import { Stats } from '@react-three/drei';
 import Experience from './components/Experience';
 import WeatherInfo from './components/WeatherInfo';
 import { Leva } from 'leva';
@@ -11,16 +11,6 @@ type Weather = {
   temp?: [string, string];
   wx?: string;
 };
-
-function Wrapper({ children }: {
-  children?: ReactNode
-}) {
-  return (
-    <div className="px-16 py-20 w-full h-full dark:bg-gray-800">
-      {children}
-    </div>
-  );
-}
 
 export default function App() {
   const { data, isLoading, error } = useWeather();
@@ -38,20 +28,18 @@ export default function App() {
   }, [data, location]);
 
   return (
-    <Wrapper>
+    <>
       <Leva flat collapsed hidden />
+      <Stats />
 
       <Experience setLocation={setLocation} />
 
-      {weather && (
-        <div className="mx-auto max-w-[1440px] w-full h-full">
-          <div className="flex-1 max-w-[600px] pointer-events-none">
-            <WeatherInfo weatherElement={weather} />
-          </div>
-        </div>
-      )}
-      
-    </Wrapper>
+      <div className="px-12 py-8 mx-auto w-full max-w-[1200px] h-full dark:text-gray-50 relative pointer-events-none">
+        <h1 className="mb-6 py-4 text-4xl font-bold">台灣天氣預報</h1>
+
+        {weather && <WeatherInfo weatherElement={weather} />}
+      </div>
+    </>
   );
 }
 
