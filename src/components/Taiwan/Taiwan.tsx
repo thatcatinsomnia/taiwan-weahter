@@ -4,7 +4,7 @@ Command: npx gltfjsx@6.1.3 ./public/tw3d.glb -o ./src/components/Taiwan/text.tsx
 */
 import type { ThreeEvent } from '@react-three/fiber';
 import type { Dispatch, SetStateAction } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { GLTF } from 'three-stdlib';
 import * as THREE from 'three';
@@ -23,6 +23,7 @@ import Sun from '../Sun';
 import useCameraControls from '../../hooks/useCameraControls';
 import useTaiwanControls from '../../hooks/useTaiwanControls';
 import useCloudControls from '../../hooks/useCloudControls';
+import defaultPositions from '../../constants/defaultPositions';
 import locations from '../../constants/locations';
 
 type GLTFResult = GLTF & {
@@ -59,11 +60,11 @@ type GLTFResult = GLTF & {
 type TMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
 
 type Props = JSX.IntrinsicElements['group'] & {
+  wxCode?: string;
   cameraApi: SpringRef<{
     position: [x: number, y: number, z: number];
     rotationX: number;
   }>;
-
   setLocation: Dispatch<SetStateAction<string>>;
 };
 
@@ -76,9 +77,12 @@ const NUM_OF_RAINDROP = 60;
 const CLOUD_SIZE = 0.06;
 const SUN_SIZE = 0.026;
 const SUN_INTENSITY = 0.8;
-const CAMERA_DEFAULT_POSITION: [number, number, number] = [0, 0, 5];
+// const CAMERA_DEFAULT_POSITION: [number, number, number] = [0, 0, 5];
 
-export default function Taiwan({ cameraApi, setLocation, ...delegated }: Props) {
+// check https://opendata.cwb.gov.tw/opendatadoc/MFC/ForecastElement.pdf for the code that should rain
+const CODE_NOT_RAIN = ['1', '2', '3', '4', '5', '6', '7', '24', '25', '26', '27', '28', '42'];
+
+export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }: Props) {
   const { nodes, materials } = useGLTF('/tw3d.glb') as unknown as GLTFResult;
 
   const defaultMaterial = materials.black;
@@ -92,15 +96,23 @@ export default function Taiwan({ cameraApi, setLocation, ...delegated }: Props) 
     rotationX
   } = useCameraControls();
   const { x: taiwanX, y: taiwanY, z: taiwanZ } = useTaiwanControls();
-  const { z: cloudZ, wireframe } = useCloudControls();
+  const { z: cloudZ } = useCloudControls();
 
   const taiwanPosition = new THREE.Vector3(taiwanX, taiwanY, taiwanZ);
 
   const [activeCity, setActiveCity] = useState<TMesh>();
-  const [weather, setWeather] = useState<'cloud' | 'rain' | 'sun'>();
   const cameraOffsetVec = new THREE.Vector3(offsetX, offsetY, offsetZ);
+  
+  const shouldRain = wxCode ? !CODE_NOT_RAIN.includes(wxCode) : false;
 
   const [cloudSprings, cloudApi] = useSpring(() => ({
+    scale: 0,
+    x: -9,
+    y: -9,
+    z: -9
+  }));
+
+  const [darkCloudSprings, darkCloudApi] = useSpring(() => ({
     scale: 0,
     x: -9,
     y: -9,
@@ -126,6 +138,26 @@ export default function Taiwan({ cameraApi, setLocation, ...delegated }: Props) 
     })
   );
 
+  useEffect(() => {
+    hideWeatherIcon();
+
+    if (!wxCode || !activeCity) {
+      return;
+    }
+
+    const newCameraPosition = activeCity.position.clone().add(cameraOffsetVec);
+    startCameraAnimation(newCameraPosition);
+
+    // we need to add taiwan position to align the camera,
+    // because taiwan position is not at origin, but camera x and y is at origin
+    const iconPosition = activeCity.position.clone().add(taiwanPosition);
+    iconPosition.z = 0.5;
+    
+    startCloudAnimation(iconPosition);
+    startSunAnimation(iconPosition);
+    console.log(wxCode);
+  }, [wxCode, activeCity]);
+  
   const changeActiveCityAndUpdateStyle = (newActiveCity: TMesh) => {
     // before set the clicked mesh to the active one,
     // we need to clear the style for the current one store in state
@@ -133,7 +165,7 @@ export default function Taiwan({ cameraApi, setLocation, ...delegated }: Props) 
       clearActiveCityAndRemoveStyle();
     }
     newActiveCity.material = activeMaterial;
-    newActiveCity.position.z = 0.06;
+    newActiveCity.position.z = 0.05;
     setActiveCity(newActiveCity);
   };
 
@@ -178,71 +210,44 @@ export default function Taiwan({ cameraApi, setLocation, ...delegated }: Props) 
     // stop animation first, otherwise the raindrop animation will be strange when click between city
     // commment it to see the difference
     cloudApi.stop(true);
+    darkCloudApi.stop(true);
     sunApi.stop(true);
     raindropGroupApi.stop(true);
 
     cloudApi.set({ scale: 0 });
+    darkCloudApi.set({ scale: 0 });
     sunApi.set({ scale: 0, intensity: 0 });
     raindropGroupApi.set({ scale: 0 });
   };
 
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation();
-    const clickedCity = e.object as TMesh;
+  const startCameraAnimation = (position: THREE.Vector3) => {
+    const newPosition = position.toArray();
 
-    if (clickedCity.id === activeCity?.id) {
+    cameraApi.start({
+      to: {
+        position: newPosition,
+        rotationX: rotationX
+      }
+    });
+  };
+
+  const startCloudAnimation = (position: THREE.Vector3) => {
+    if (wxCode === '1') {
       return;
     }
 
-    hideWeatherIcon();
-
-    const newCameraPosition = clickedCity.position.clone();
-    newCameraPosition.add(cameraOffsetVec);
-
-    const cloudDelayTime = 360;
-    
-    setLocation(locations[clickedCity.name as keyof typeof locations]);
-
-    if (activeCity === undefined) {
-      cameraApi.start({
-        to: {
-          position: newCameraPosition.toArray(),
-          rotationX: rotationX
-        },
-        config: {
-          easing: easings.easeOutQuad,
-          duration: 500
-        }
-      });
-    } else if (activeCity?.id !== clickedCity.id) {
-      cameraApi.start({
-        to: {
-          position: newCameraPosition.toArray()
-        }
-      });
-    }
-
-    // we need to add taiwan position to align the camera,
-    // because taiwan position is not at origin, but camera x and y is at origin
-    const newCloudPosition = clickedCity.position.clone().add(taiwanPosition);
-    newCloudPosition.z = cloudZ;
-
     cloudApi.set({
       scale: 0,
-      x: newCloudPosition.x,
-      y: newCloudPosition.y,
-      z: newCloudPosition.z
+      x: position.x,
+      y: position.y,
+      z: position.z
     });
 
-    const newSunPosition = newCloudPosition
-      .clone()
-      .add(new THREE.Vector3(0.16, 0, 0.12));
-    sunApi.set({
+    darkCloudApi.set({
       scale: 0,
-      intensity: 0,
-      x: newSunPosition.x,
-      y: newSunPosition.y,
-      z: newSunPosition.z
+      x: position.x,
+      y: position.y,
+      z: position.z
     });
 
     cloudApi.start({
@@ -252,76 +257,198 @@ export default function Taiwan({ cameraApi, setLocation, ...delegated }: Props) 
       to: {
         scale: CLOUD_SIZE
       },
-      delay: cloudDelayTime,
+      delay: 360,
       config: config.wobbly,
       onRest: (result) => {
         if (result.cancelled) {
           return;
         }
 
-        const isRain = false;
-        // make raindrop position random
-        // the value below is find by using leva to manually find the acceptable value
-        // rangeX: [-0.1, 0.13]
-        // raingeY: [-0.05, 0.05]
-          raindropGroupSprings.map((springs, i) => {
-            const basePosition = newCloudPosition.clone();
-            const randomX = genRandomNumber(-0.1, 0.13);
-            const randomY = genRandomNumber(-0.05, 0.05);
-
-            const newPosition = basePosition.add(
-              new THREE.Vector3(randomX, randomY, 0)
-            );
-
-            springs.x.set(newPosition.x);
-            springs.y.set(newPosition.y);
-            springs.z.set(cloudZ);
-          });
-
-          raindropGroupApi.start(i => ({
-            from: {
-              z: cloudZ,
-              scale: RAINDROP_SIZE
-            },
-            to: async (next, cancel) => {
-              await next({ z: 0 });
-              await next({ scale: 0 });
-            },
-            delay: Math.random() * i * 200,
-            loop: true,
-            config: {
-              duration: 800,
-              easing: easings.linear
-            }
-          }));
-
-          sunApi.start({
-            from: {
-              scale: 0,
-              x: newSunPosition.x - 0.3,
-              z: newSunPosition.z - 0.1,
-              rz: 0,
-              intensity: 0
-            },
-            to: {
-              scale: SUN_SIZE,
-              x: newSunPosition.x,
-              z: newSunPosition.z,
-              rz: -Math.PI,
-              intensity: SUN_INTENSITY 
-            }
-          });
-        }
+        startRainAnimation(position);
+      }
     });
 
-    const weathers = ['rain', 'cloud'] as const;
-    const random = Math.floor(Math.random() * weathers.length);
+    if (wxCode === '5') {
+      // 多雲
+      darkCloudApi.start({
+        from: {
+          x: position.x,
+          y: position.y,
+          z: position.z,
+          scale: 0
+        },
+        to: {
+          x: position.x + 0.12,
+          y: position.y + 0.05,
+          z: position.z + 0.1,
+          scale: 0.044
+        },
+        delay: 360,
+        config: config.wobbly
+      });
+    } else if (wxCode === '6') {
 
-    setWeather(weathers[random]);
+    }
+  };
+  
+  const startRainAnimation = (position: THREE.Vector3) => {
+    // make raindrop position random
+    // the value below is find by using leva to manually find the acceptable value
+    // rangeX: [-0.1, 0.13]
+    // raingeY: [-0.05, 0.05]
+    raindropGroupSprings.map((springs, i) => {
+      const basePosition = position.clone();
+      const randomX = genRandomNumber(-0.1, 0.13);
+      const randomY = genRandomNumber(-0.05, 0.05);
+
+      const newPosition = basePosition.add(
+        new THREE.Vector3(randomX, randomY, 0)
+      );
+
+      springs.x.set(newPosition.x);
+      springs.y.set(newPosition.y);
+      springs.z.set(cloudZ);
+    });
+
+    if (shouldRain) {
+      raindropGroupApi.start(i => ({
+        from: {
+          z: cloudZ,
+          scale: RAINDROP_SIZE
+        },
+        to: async (next, cancel) => {
+          await next({ z: 0 });
+          await next({ scale: 0 });
+        },
+        delay: Math.random() * i * 200,
+        loop: true,
+        config: {
+          duration: 800,
+          easing: easings.linear
+        }
+      }));
+    }
+  };
+
+  const startSunAnimation = (position: THREE.Vector3) => {
+    sunApi.set({
+      scale: 0,
+      intensity: 0.5,
+      x: position.x,
+      y: position.y,
+      z: position.z
+    });
+
+    if (wxCode === '1') {
+      // 1 晴天
+      sunApi.start({
+        from: {
+          scale: 0,
+          x: position.x,
+          z: position.z - 0.1,
+          rz: 0,
+          intensity: 0
+        },
+        to: {
+          scale: SUN_SIZE,
+          x: position.x,
+          z: position.z,
+          rz: -Math.PI,
+          intensity: SUN_INTENSITY 
+        },
+        config: config.wobbly,
+        delay: 300
+      });
+    } else if (wxCode === '2') {
+      // 2 晴時多雲
+      sunApi.start({
+        from: {
+          scale: 0,
+          x: position.x + 0.08,
+          y: position.y,
+          z: position.z,
+          rz: 0,
+          intensity: 0
+        },
+        to: {
+          scale: SUN_SIZE,
+          // x: position.x - 0.1,
+          // y: position.y - 0.1,
+          x: position.x - 0.1,
+          y: position.y - 0.07,
+          z: position.z + 0.14,
+          rz: Math.PI,
+          intensity: SUN_INTENSITY 
+        },
+        config: config.wobbly,
+        delay: 360
+      });
+    } else if (wxCode === '3') {
+      // 3 多雲時晴
+      sunApi.start({
+        from: {
+          scale: 0,
+          x: position.x,
+          y: position.y,
+          z: position.z,
+          rz: 0,
+          intensity: 0
+        },
+        to: {
+          scale: SUN_SIZE,
+          x: position.x + 0.1,
+          y: position.y + 0.08,
+          z: position.z + 0.1,
+          rz: -Math.PI,
+          intensity: SUN_INTENSITY 
+        },
+        config: config.wobbly,
+        delay: 360
+      });
+    } else if (wxCode === '4') {
+      // 4 多雲
+      sunApi.start({
+        from: {
+          scale: 0,
+          x: position.x,
+          y: position.y,
+          z: position.z,
+          rz: 0,
+          intensity: 0
+        },
+        to: {
+          scale: SUN_SIZE,
+          x: position.x + 0.1,
+          y: position.y + 0.1,
+          z: position.z + 0.05,
+          rz: -Math.PI,
+          intensity: 0.05 
+        },
+        config: config.wobbly,
+        delay: 360
+      });
+    }
+
+  }
+
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    const clickedCity = e.object as TMesh;
+
+    if (clickedCity.id === activeCity?.id) {
+      return;
+    }
+
+    // hideWeatherIcon();
+
+    const newCameraPosition = clickedCity.position.clone();
+    newCameraPosition.add(cameraOffsetVec);
+
+    const cloudDelayTime = 360;
+    
+    setLocation(locations[clickedCity.name as keyof typeof locations]);
+
     changeActiveCityAndUpdateStyle(clickedCity);
-    // const locationName = locations[clickedCity.name as keyof typeof locations];
-    // const activeWeather = records.find(record => record.locationName === locationName);
-    // const weatherInfo = extractWeatherInfo(activeWeather);
   };
 
   const handlePointerMissed = (e: MouseEvent) => {
@@ -330,7 +457,7 @@ export default function Taiwan({ cameraApi, setLocation, ...delegated }: Props) 
 
       cameraApi.start({
         to: {
-          position: CAMERA_DEFAULT_POSITION,
+          position: defaultPositions.camera,
           rotationX: 0
         },
         config: {
@@ -343,20 +470,24 @@ export default function Taiwan({ cameraApi, setLocation, ...delegated }: Props) 
     }
 
     setLocation('');
-    setWeather(undefined);
   };
 
   return (
     <>
-      <group>
-        <AnimatedCloud
-          x={cloudSprings.x}
-          y={cloudSprings.y}
-          z={cloudSprings.z}
-          scale={cloudSprings.scale}
-          wireframe={wireframe}
-        />
-      </group>
+      <AnimatedCloud
+        x={cloudSprings.x}
+        y={cloudSprings.y}
+        z={cloudSprings.z}
+        scale={cloudSprings.scale}
+      />
+
+      <AnimatedCloud
+        x={darkCloudSprings.x}
+        y={darkCloudSprings.y}
+        z={darkCloudSprings.z}
+        scale={darkCloudSprings.scale}
+        dark
+      />
 
       {raindropGroupSprings.map(({ x, y, z, scale }, i) => (
         <AnimatedRaindrop key={i} x={x} y={y} z={z} scale={scale} />

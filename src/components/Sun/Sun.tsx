@@ -4,10 +4,9 @@ Command: npx gltfjsx@6.1.4 public/sun.glb -t -p6 -k -r
 */
 
 import * as THREE from 'three';
-import { useGLTF, useHelper } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import { GLTF } from 'three-stdlib';
-import { useControls } from 'leva';
-import { useRef } from 'react';
+
 type GLTFResult = GLTF & {
   nodes: { Sun001: THREE.Mesh;
     SunLight: THREE.Mesh;
@@ -38,7 +37,7 @@ export default function Sun({
   ...props
 }: Props) {
   const { nodes, materials } = useGLTF('/sun.glb') as unknown as GLTFResult;
-
+  
   return (
     <group
       {...props}

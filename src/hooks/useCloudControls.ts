@@ -7,7 +7,6 @@ export default function useCloudControls() {
       max: 1,
       step: 0.01,
       value: 0.5
-    },
-    wireframe: false
+    }
   });
 }

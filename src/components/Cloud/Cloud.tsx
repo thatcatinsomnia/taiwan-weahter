@@ -23,14 +23,15 @@ export type Props = JSX.IntrinsicElements['group'] & {
   x?: number;
   y?: number;
   z?: number;
+  dark?: boolean;
 };
 
-export default function Cloud({ weather, x = 0, y = 0, z = 0, scale, wireframe = false, ...props }: Props) {
+export default function Cloud({ weather, x = 0, y = 0, z = 0, scale = 0.06, dark = false, ...props }: Props) {
   const { nodes, materials } = useGLTF('/cloud.glb') as unknown as GLTFResult;
   const cloudRef = useRef<THREE.Group>(null);
-
-  materials.sky.wireframe = wireframe;
-
+  const darkMaterial = materials.sky.clone();
+  darkMaterial.color.set('#a4a8ac');
+  
   return (
     <group
       {...props}
@@ -44,7 +45,7 @@ export default function Cloud({ weather, x = 0, y = 0, z = 0, scale, wireframe =
     >
       <mesh
         geometry={nodes.cloud.geometry}
-        material={materials.sky}
+        material={dark ? darkMaterial :  materials.sky}
       />
     </group>
   );

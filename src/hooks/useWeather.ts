@@ -12,7 +12,7 @@ type WeatherTime = {
   endTime: string;
   parameter: {
     parameterName: string;
-    parameterUnit: string;
+    parameterValue: string;
   };
 };
 
@@ -33,7 +33,10 @@ type QueryData = Location[];
 type FormatedWeather = {
   location?: string;
   temp?: [string, string];
-  wx?: string;
+  wx?: {
+    name: string;
+    code: string;
+  };
   ci?: string;
 };
 
@@ -78,10 +81,17 @@ const fetchWeatherData = async () => {
         total['temp'][0] = `${elementTime.parameter.parameterName} ℃`;
       } else if (elementName === 'MaxT') {
         total['temp'][1] = `${elementTime.parameter.parameterName} ℃`;
+      } else if (elementName === 'CI') {
+        const lowerCaseElementName = elementName.toLocaleLowerCase() as Lowercase<typeof elementName>;
+        total['ci'] = elementTime.parameter.parameterName;
       } else {
         const lowerCaseElementName = elementName.toLocaleLowerCase() as Lowercase<typeof elementName>;
-        total[lowerCaseElementName] = elementTime.parameter.parameterName;
-      }     
+
+        total[lowerCaseElementName] = {
+          name: elementTime.parameter.parameterName,
+          code: elementTime.parameter.parameterValue
+        };
+      }
       
       return total;
     }, {} as FormatedWeather);

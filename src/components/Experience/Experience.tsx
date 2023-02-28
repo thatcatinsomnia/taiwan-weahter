@@ -15,9 +15,10 @@ type CameraSpring = {
 
 type Props = {
   setLocation: Dispatch<SetStateAction<string>>;
+  wxCode?: string;
 }
 
-export default function Experience({ setLocation }: Props) {
+export default function Experience({ setLocation, wxCode }: Props) {
   const [springs, api] = useSpring<CameraSpring>(() => ({
     position: [0, 0, 3.8],
     rotationX: 0
@@ -31,7 +32,7 @@ export default function Experience({ setLocation }: Props) {
         <directionalLight position={[0, 0, 10]} intensity={0.5} />
 
         <Suspense fallback={null}>
-          <Taiwan cameraApi={api} setLocation={setLocation} />
+          <Taiwan cameraApi={api} setLocation={setLocation} wxCode={wxCode} />
         </Suspense>
       </Canvas>
     </div>
