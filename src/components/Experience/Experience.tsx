@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import type { Dispatch, SetStateAction } from 'react';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import { animated, useSpring } from '@react-spring/three';
 import Taiwan from '../Taiwan';
+import { useMediaQuery } from 'react-responsive';
+import useDefaultPositions from '../../hooks/useDefaultPositions';
 
 const AnimatedPerspectiveCamera = animated(PerspectiveCamera);
 
@@ -19,10 +21,13 @@ type Props = {
 }
 
 export default function Experience({ setLocation, wxCode }: Props) {
+  const { camera } = useDefaultPositions();
+  
   const [springs, api] = useSpring<CameraSpring>(() => ({
-    position: [0, 0, 3.8],
+    position: [camera.position.x, camera.position.y, camera.position.z],
     rotationX: 0
   }));
+
 
   return (
     <div className="fixed inset-0 dark:bg-gray-800">

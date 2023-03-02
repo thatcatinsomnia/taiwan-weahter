@@ -20,11 +20,12 @@ import { genRandomNumber } from '../../libs/helper';
 import Cloud from '../Cloud';
 import Raindrop from '../Raindrop';
 import Sun from '../Sun';
-import useCameraControls from '../../hooks/useCameraControls';
-import useTaiwanControls from '../../hooks/useTaiwanControls';
-import useCloudControls from '../../hooks/useCloudControls';
-import defaultPositions from '../../constants/defaultPositions';
+// import useCameraControls from '../../hooks/useCameraControls';
+// import useTaiwanControls from '../../hooks/useTaiwanControls';
+// import useCloudControls from '../../hooks/useCloudControls';
+// import defaultPositions from '../../constants/defaultPositions';
 import locations from '../../constants/locations';
+import useDefaultPositions from '../../hooks/useDefaultPositions';
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -77,7 +78,6 @@ const NUM_OF_RAINDROP = 60;
 const CLOUD_SIZE = 0.06;
 const SUN_SIZE = 0.026;
 const SUN_INTENSITY = 0.8;
-// const CAMERA_DEFAULT_POSITION: [number, number, number] = [0, 0, 5];
 
 // check https://opendata.cwb.gov.tw/opendatadoc/MFC/ForecastElement.pdf for the code that should rain
 const CODE_NOT_RAIN = ['1', '2', '3', '4', '5', '6', '7', '24', '25', '26', '27', '28', '42'];
@@ -89,20 +89,11 @@ export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }:
   const activeMaterial = new THREE.MeshStandardMaterial({ color: '#14a461' });
   const hoveredMaterial = new THREE.MeshStandardMaterial({ color: '#0a5230' });
 
-  const {
-    x: offsetX,
-    y: offsetY,
-    z: offsetZ,
-    rotationX
-  } = useCameraControls();
-  const { x: taiwanX, y: taiwanY, z: taiwanZ } = useTaiwanControls();
-  const { z: cloudZ } = useCloudControls();
-
-  const taiwanPosition = new THREE.Vector3(taiwanX, taiwanY, taiwanZ);
+  const { camera, taiwan, iconZ } = useDefaultPositions();
 
   const [activeCity, setActiveCity] = useState<TMesh>();
-  const cameraOffsetVec = new THREE.Vector3(offsetX, offsetY, offsetZ);
-  
+  const cameraOffsetVec = new THREE.Vector3(camera.offset.x, camera.offset.y, camera.offset.z);
+
   const shouldRain = wxCode ? !CODE_NOT_RAIN.includes(wxCode) : false;
 
   const [cloudSprings, cloudApi] = useSpring(() => ({
@@ -145,17 +136,13 @@ export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }:
       return;
     }
 
-    const newCameraPosition = activeCity.position.clone().add(cameraOffsetVec);
-    startCameraAnimation(newCameraPosition);
-
     // we need to add taiwan position to align the camera,
     // because taiwan position is not at origin, but camera x and y is at origin
-    const iconPosition = activeCity.position.clone().add(taiwanPosition);
+    const iconPosition = activeCity.position.clone().add(new THREE.Vector3(taiwan.position.x, taiwan.position.y, taiwan.position.z));
     iconPosition.z = 0.5;
     
     startCloudAnimation(iconPosition);
     startSunAnimation(iconPosition);
-    console.log(wxCode);
   }, [wxCode, activeCity]);
   
   const changeActiveCityAndUpdateStyle = (newActiveCity: TMesh) => {
@@ -177,7 +164,6 @@ export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }:
     activeCity.material = defaultMaterial;
     activeCity.position.z = 0;
     setActiveCity(undefined);
-    // activeCity.current.position.z = 0;
   };
 
   // const extractWeatherInfo = (location: (typeof records)[0]) => {
@@ -219,18 +205,7 @@ export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }:
     sunApi.set({ scale: 0, intensity: 0 });
     raindropGroupApi.set({ scale: 0 });
   };
-
-  const startCameraAnimation = (position: THREE.Vector3) => {
-    const newPosition = position.toArray();
-
-    cameraApi.start({
-      to: {
-        position: newPosition,
-        rotationX: rotationX
-      }
-    });
-  };
-
+  
   const startCloudAnimation = (position: THREE.Vector3) => {
     if (wxCode === '1') {
       return;
@@ -307,13 +282,13 @@ export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }:
 
       springs.x.set(newPosition.x);
       springs.y.set(newPosition.y);
-      springs.z.set(cloudZ);
+      springs.z.set(iconZ);
     });
 
     if (shouldRain) {
       raindropGroupApi.start(i => ({
         from: {
-          z: cloudZ,
+          z: iconZ,
           scale: RAINDROP_SIZE
         },
         to: async (next, cancel) => {
@@ -444,8 +419,13 @@ export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }:
     const newCameraPosition = clickedCity.position.clone();
     newCameraPosition.add(cameraOffsetVec);
 
-    const cloudDelayTime = 360;
-    
+    cameraApi.start({
+      to: {
+        position: newCameraPosition.toArray(),
+        rotationX: camera.rx
+      }
+    });
+
     setLocation(locations[clickedCity.name as keyof typeof locations]);
 
     changeActiveCityAndUpdateStyle(clickedCity);
@@ -457,7 +437,7 @@ export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }:
 
       cameraApi.start({
         to: {
-          position: defaultPositions.camera,
+          position: [camera.position.x, camera.position.y, camera.position.z],
           rotationX: 0
         },
         config: {
@@ -505,7 +485,9 @@ export default function Taiwan({ cameraApi, setLocation, wxCode, ...delegated }:
       <group
         {...delegated}
         dispose={null}
-        position={taiwanPosition}
+        position-x={taiwan.position.x}
+        position-y={taiwan.position.y}
+        position-z={taiwan.position.z}
         onClick={handleClick}
         onPointerMissed={handlePointerMissed}
         onPointerOver={handlePointerOver}

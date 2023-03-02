@@ -23,7 +23,6 @@ export default function App() {
   const [location, setLocation] = useState<string>('');
 
   const [weather, setWeather] = useState<Weather>();
-  console.log(weather?.wx);
 
   const transition = useTransition(weather ?? [], {
     from: {
@@ -37,6 +36,7 @@ export default function App() {
     exitBeforeEnter: true
   });
 
+
   useEffect(() => {
     if (isLoading || !data) {
       return;
@@ -46,7 +46,6 @@ export default function App() {
 
     setWeather(locationWeather);
   }, [data, location]);
-
   return (
     <>
       <Leva flat collapsed hidden />
@@ -54,8 +53,8 @@ export default function App() {
 
       <Experience setLocation={setLocation} wxCode={weather?.wx?.code} />
 
-      <div className="px-12 py-10 mx-auto w-full max-w-[1200px] h-full dark:text-gray-50 relative pointer-events-none">
-        <h1 className="mb-6 py-4 text-4xl font-bold">台灣天氣預報</h1>
+      <div className="p-6 md:p-10 text-center md:text-left mx-auto w-full max-w-[1200px] h-full dark:text-gray-50 relative pointer-events-none">
+        <h1 className="mb-6 md:py-4 text-3xl md:text-4xl font-bold">台灣天氣預報</h1>
 
         {weather && (
           transition((style) => (
