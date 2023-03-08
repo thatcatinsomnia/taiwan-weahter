@@ -53,8 +53,8 @@ export default function App() {
 
       <Experience setLocation={setLocation} wxCode={weather?.wx?.code} />
 
-      <div className="p-6 md:p-10 text-center md:text-left mx-auto w-full max-w-[1200px] h-full dark:text-gray-50 relative pointer-events-none">
-        <h1 className="mb-6 md:py-4 text-3xl md:text-4xl font-bold">台灣天氣預報</h1>
+      <div className="p-6 md:p-10 mx-auto w-full max-w-[1200px] h-full dark:text-gray-50 relative pointer-events-none">
+        <h1 className="mb-6 md:py-4 text-center md:text-left text-3xl md:text-4xl font-bold">台灣天氣預報</h1>
 
         {weather && (
           transition((style) => (
