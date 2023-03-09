@@ -98,7 +98,7 @@ const fetchWeatherData = async () => {
   });
 };
 
-export default function useWeather() {
+export default function useFetchWeathers() {
   const { data, error, isLoading, isError } = useQuery({
     queryKey: ['weathers'],
     queryFn: fetchWeatherData,

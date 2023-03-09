@@ -102,7 +102,6 @@ export default function useDefaultPositions() {
   const isDesktop = useMediaQuery({ maxWidth: '1600px' });
 
   if (isMobile) {
-    console.log('mobile');
     return {
       taiwan: {
         position: TAIWAN_POSITION_MOBILE
@@ -118,7 +117,6 @@ export default function useDefaultPositions() {
 
   // return mobile position if user is using tablet in protrait mode to center the 3d model
   if (isProtrait && isTablet) {
-    console.log('tablet protrait');
     return {
       taiwan: {
         position: TAIWAN_POSITION_TABLET_PROTRAIT
@@ -133,8 +131,6 @@ export default function useDefaultPositions() {
   }
 
   if (isLandScape && isTablet) {
-    console.log('tablet landscape');
-
     return {
       taiwan: {
         position: TAIWAN_POSITION_TABLET_LANDSCAPE
@@ -149,8 +145,6 @@ export default function useDefaultPositions() {
   }
 
   if (isDesktop) {
-    console.log('desktop');
-
     return {
       taiwan: {
         position: TAIWAN_POSITION_DESKTOP
@@ -165,7 +159,6 @@ export default function useDefaultPositions() {
   }
 
   // fallback to large screen
-  console.log('fallback');
   return {
     taiwan: {
       position: TAIWAN_POSITION_LARGE_SCREEN
