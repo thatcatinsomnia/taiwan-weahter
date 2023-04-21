@@ -100,19 +100,18 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
   const taiwanRef = useForwardRef(ref);
   const { cameraApi, ...delegated } = props;
   const { weather, setWeather, selectedCity, setSelectedCity } = useSelectedCity();
-
+  
   const { nodes, materials } = useGLTF('/tw3d.glb') as unknown as GLTFResult;
   const defaultMaterial = materials.black;
   const activeMaterial = new THREE.MeshStandardMaterial({ color: '#14a461' });
   const hoveredMaterial = new THREE.MeshStandardMaterial({ color: '#0a5230' });
 
-  const { camera, taiwan, iconZ } = useDefaultPositions();
+  const { camera, taiwan } = useDefaultPositions();
 
   const cameraOffsetVec = new THREE.Vector3(camera.offset.x, camera.offset.y, camera.offset.z);
 
   const wxCode = weather?.wx?.code;
   const shouldRain = wxCode ? !CODE_NOT_RAIN.includes(wxCode) : false;
-
   const [cloudSprings, cloudApi] = useSpring(() => ({
     scale: 0,
     x: -9,
@@ -188,7 +187,7 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
     
     startCloudAnimation(iconPosition);
     startSunAnimation(iconPosition);
-  }, [selectedCity]);
+  }, [selectedCity, weather]);
   
   const clearAllCityStyle = () => {
     taiwanRef?.current.children.forEach(mesh => {
@@ -274,8 +273,10 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
         if (result.cancelled) {
           return;
         }
-
-        startRainAnimation(position);
+        
+        if (shouldRain) {
+          startRainAnimation(position);
+        }
       }
     });
 
@@ -297,8 +298,6 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
         delay: 360,
         config: config.wobbly
       });
-    } else if (wxCode === '6') {
-
     }
   };
   
@@ -312,33 +311,31 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
       const randomX = genRandomNumber(-0.1, 0.13);
       const randomY = genRandomNumber(-0.05, 0.05);
 
+      // do not add z axis, make it equal to cloud z position
       const newPosition = basePosition.add(
         new THREE.Vector3(randomX, randomY, 0)
       );
 
       springs.x.set(newPosition.x);
       springs.y.set(newPosition.y);
-      springs.z.set(iconZ);
+      springs.z.set(newPosition.z);
     });
 
-    if (shouldRain) {
-      raindropGroupApi.start(i => ({
-        from: {
-          z: iconZ,
-          scale: RAINDROP_SIZE
-        },
-        to: async (next, cancel) => {
-          await next({ z: 0 });
-          await next({ scale: 0 });
-        },
-        delay: Math.random() * i * 200,
-        loop: true,
-        config: {
-          duration: 800,
-          easing: easings.linear
-        }
-      }));
-    }
+    raindropGroupApi.start(i => ({
+      from: {
+        scale: RAINDROP_SIZE
+      },
+      to: async (next, cancel) => {
+        await next({ z: 0 });
+        await next({ scale: 0 });
+      },
+      delay: Math.random() * i * 200,
+      loop: true,
+      config: {
+        duration: 800,
+        easing: easings.linear
+      }
+    }));
   };
 
   const startSunAnimation = (position: THREE.Vector3) => {
@@ -349,7 +346,8 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
       y: position.y,
       z: position.z
     });
-
+    
+    
     if (wxCode === '1') {
       // 1 晴天
       sunApi.start({
@@ -383,8 +381,6 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
         },
         to: {
           scale: SUN_SIZE,
-          // x: position.x - 0.1,
-          // y: position.y - 0.1,
           x: position.x - 0.1,
           y: position.y - 0.07,
           z: position.z + 0.14,
