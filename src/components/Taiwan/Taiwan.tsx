@@ -323,7 +323,8 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
 
     raindropGroupApi.start(i => ({
       from: {
-        scale: RAINDROP_SIZE
+        scale: RAINDROP_SIZE,
+        z: position.z
       },
       to: async (next, cancel) => {
         await next({ z: 0 });
