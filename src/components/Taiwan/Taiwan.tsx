@@ -20,7 +20,8 @@ import Cloud from '../Cloud';
 import Raindrop from '../Raindrop';
 import Sun from '../Sun';
 import useDefaultPositions from '../../hooks/useDefaultPositions';
-import { useSelectedCity } from '../../hooks/useSelectedCity';
+import { useSelectedCity, setCity } from '../../stores/useCityWeatherStore';
+import useFetchWeathers from '../../hooks/useFetchWeathers';
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -99,19 +100,21 @@ const useForwardRef = <T,>(
 const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
   const taiwanRef = useForwardRef(ref);
   const { cameraApi, ...delegated } = props;
-  const { weather, setWeather, selectedCity, setSelectedCity } = useSelectedCity();
+  const { city, weather } = useSelectedCity(({ city, weather }) => ({ city, weather }));
+  const wxCode = weather?.wx?.code;
+  const shouldRain = wxCode ? !CODE_NOT_RAIN.includes(wxCode) : false;
+
+  const { data: weathers, isLoading, error } = useFetchWeathers();
   
   const { nodes, materials } = useGLTF('/tw3d.glb') as unknown as GLTFResult;
   const defaultMaterial = materials.black;
+
   const activeMaterial = new THREE.MeshStandardMaterial({ color: '#14a461' });
   const hoveredMaterial = new THREE.MeshStandardMaterial({ color: '#0a5230' });
 
   const { camera, taiwan } = useDefaultPositions();
-
   const cameraOffsetVec = new THREE.Vector3(camera.offset.x, camera.offset.y, camera.offset.z);
 
-  const wxCode = weather?.wx?.code;
-  const shouldRain = wxCode ? !CODE_NOT_RAIN.includes(wxCode) : false;
   const [cloudSprings, cloudApi] = useSpring(() => ({
     scale: 0,
     x: -9,
@@ -146,7 +149,7 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
   );
 
   useEffect(() => {
-    if (!selectedCity) {
+    if (!city) {
       hideWeatherIcon();
 
       cameraApi.start({
@@ -170,7 +173,7 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
     updateActiveCityStyle();
 
     // animate camera to selected city position in 3d world
-    const newCameraPosition = selectedCity.position.clone();
+    const newCameraPosition = city.position.clone();
     newCameraPosition.add(cameraOffsetVec);
 
     cameraApi.start({
@@ -182,12 +185,12 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
 
     // we need to add taiwan position to align the camera,
     // because taiwan position is not at origin, but camera x and y is at origin
-    const iconPosition = selectedCity.position.clone().add(new THREE.Vector3(taiwan.position.x, taiwan.position.y, taiwan.position.z));
+    const iconPosition = city.position.clone().add(new THREE.Vector3(taiwan.position.x, taiwan.position.y, taiwan.position.z));
     iconPosition.z = 0.5;
     
     startCloudAnimation(iconPosition);
     startSunAnimation(iconPosition);
-  }, [selectedCity, weather]);
+  }, [city, weather]);
   
   const clearAllCityStyle = () => {
     taiwanRef?.current.children.forEach(mesh => {
@@ -197,7 +200,7 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
   };
 
   const updateActiveCityStyle = () => {
-    const activeMesh = taiwanRef?.current.children.find(mesh => mesh.name === selectedCity?.name) as TMesh;
+    const activeMesh = taiwanRef?.current.children.find(mesh => mesh.name === city?.name) as TMesh;
 
     if (activeMesh) {
       activeMesh.material = activeMaterial;
@@ -210,7 +213,7 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
 
     const hoveredCity = e.object as TMesh;
 
-    if (hoveredCity.id === selectedCity?.id) {
+    if (hoveredCity.id === city?.id) {
       return;
     }
 
@@ -222,7 +225,7 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
 
     const hoveredOutCity = e.object as TMesh;
 
-    if (hoveredOutCity.id !== selectedCity?.id) {
+    if (hoveredOutCity.id !== city?.id) {
       hoveredOutCity.material = defaultMaterial;
     }
   };
@@ -447,15 +450,15 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
       return;
     }
 
-    if (clickedCity.id === selectedCity?.id) {
+    if (clickedCity.id === city?.id) {
       return;
     }
 
-    setSelectedCity(clickedCity);
+    setCity(clickedCity, weathers);
   };
 
   const handlePointerMissed = (e: MouseEvent) => {
-    if (selectedCity) {
+    if (city) {
       hideWeatherIcon();
 
       cameraApi.start({
@@ -472,8 +475,7 @@ const Taiwan = forwardRef<THREE.Group, Props>((props, ref) => {
       clearAllCityStyle();
     }
 
-    setSelectedCity(undefined);
-    setWeather(undefined);
+    setCity(null);
   };
   
   return (

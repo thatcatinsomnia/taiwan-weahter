@@ -4,8 +4,8 @@ import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import { animated, useSpring } from '@react-spring/three';
-import Taiwan from '../Taiwan';
 import useDefaultPositions from '../../hooks/useDefaultPositions';
+import Taiwan from '../Taiwan';
 
 const AnimatedPerspectiveCamera = animated(PerspectiveCamera);
 
@@ -34,9 +34,7 @@ export default function Experience({ taiwanRef }: Props) {
         <ambientLight intensity={0.2} />
         <directionalLight position={[0, 0, 10]} intensity={0.5} />
 
-        <Suspense fallback={null}>
-          <Taiwan cameraApi={api} ref={taiwanRef} />
-        </Suspense>
+        <Taiwan cameraApi={api} ref={taiwanRef} />
       </Canvas>
     </div>
   );
