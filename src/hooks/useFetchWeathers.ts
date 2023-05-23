@@ -103,7 +103,7 @@ export default function useFetchWeathers() {
     queryKey: ['weathers'],
     queryFn: fetchWeatherData,
     staleTime: Infinity,
-    retry: false
+    retry: 3
   });
 
   return {

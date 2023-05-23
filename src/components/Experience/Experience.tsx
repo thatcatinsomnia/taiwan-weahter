@@ -1,6 +1,5 @@
 import type { RefObject } from 'react';
 import * as THREE from 'three';
-import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import { animated, useSpring } from '@react-spring/three';
@@ -28,7 +27,7 @@ export default function Experience({ taiwanRef }: Props) {
 
 
   return (
-    <div className="fixed inset-0 dark:bg-gray-800">
+    <div className="fixed inset-0">
       <Canvas>
         <AnimatedPerspectiveCamera position={springs.position} rotation-x={springs.rotationX} makeDefault />
         <ambientLight intensity={0.2} />

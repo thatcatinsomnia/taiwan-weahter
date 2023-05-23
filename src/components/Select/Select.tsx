@@ -1,16 +1,16 @@
-import type { ReactNode, HTMLProps } from 'react';
+import type { ReactNode, ComponentProps } from 'react';
 
 type Props = {
   children: ReactNode;
-} & HTMLProps<HTMLSelectElement>;
+} & ComponentProps<'select'>;
 
-export default function Select({ children, ...delegated }: Props) {
+export default function Select({ children, className, ...delegated }: Props) {
   return (
-    <div className="mb-6 w-full max-w-[440px] mx-auto md:mx-[revert] relative dark:text-gray-50">
+    <div className={`mb-4 w-full sm:max-w-[440px] relative dark:text-gray-50 ${className}`}>
       <select
         className="px-6 py-3 w-full border dark:bg-neutral-900/80 border-neutral-700 rounded-md shadow-lg backdrop-blur pointer-events-auto appearance-none"
         {...delegated}
-        >
+      >
         {children}
       </select>
 
